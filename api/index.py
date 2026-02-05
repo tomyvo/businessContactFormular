@@ -35,19 +35,19 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write("Invalid JSON format".encode('utf-8'))
                 return
             
-            # Extract fields (matching your n8n logic)
-            name = body.get("name", "Unbekannt")
-            email = body.get("email", "Keine Email")
-            subject = body.get("subject", "(kein Betreff)")
-            message = body.get("message", "")
+            # Extract fields (handle Capitalized or lowercase keys)
+            name = body.get("name") or body.get("Name") or "Unbekannt"
+            email = body.get("email") or body.get("Email") or "Keine Email"
+            subject = body.get("subject") or body.get("Subject") or "(kein Betreff)"
+            message = body.get("message") or body.get("Message") or ""
 
             # Validation
             if not message:
-                print("ERROR: Message field is empty or missing")
+                print(f"ERROR: Message field missing. Keys found: {list(body.keys())}")
                 self.send_response(400)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Message is required", "received_body": body}).encode('utf-8'))
+                self.wfile.write(json.dumps({"error": "Message is required", "received_keys": list(body.keys())}).encode('utf-8'))
                 return
 
         except Exception as e:
