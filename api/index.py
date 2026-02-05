@@ -21,7 +21,19 @@ class handler(BaseHTTPRequestHandler):
         try:
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
-            body = json.loads(post_data.decode('utf-8'))
+            decoded_data = post_data.decode('utf-8')
+            
+            # DEBUG LOGGING (Check Vercel Runtime Logs)
+            print(f"DEBUG: Received Body: {decoded_data}")
+
+            try:
+                body = json.loads(decoded_data)
+            except json.JSONDecodeError:
+                print("ERROR: Could not decode JSON")
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write("Invalid JSON format".encode('utf-8'))
+                return
             
             # Extract fields (matching your n8n logic)
             name = body.get("name", "Unbekannt")
@@ -31,16 +43,18 @@ class handler(BaseHTTPRequestHandler):
 
             # Validation
             if not message:
+                print("ERROR: Message field is empty or missing")
                 self.send_response(400)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Message is required"}).encode('utf-8'))
+                self.wfile.write(json.dumps({"error": "Message is required", "received_body": body}).encode('utf-8'))
                 return
 
         except Exception as e:
+            print(f"CRITICAL ERROR: {str(e)}")
             self.send_response(400)
             self.end_headers()
-            self.wfile.write(str(e).encode('utf-8'))
+            self.wfile.write(f"Server Error: {str(e)}".encode('utf-8'))
             return
 
         # 3. Formulate Telegram Message
